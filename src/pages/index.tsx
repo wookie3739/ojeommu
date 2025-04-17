@@ -1,11 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Restaurant } from '@/data/restaurants';
-import { 
-  checkAndResetVotes, 
-  findWinningRestaurant,
-  getTodayDateString,
-  sortRestaurantsByVotes
-} from '@/utils/helpers';
+import { Restaurant, restaurants as initialRestaurants, getCategories as getInitialCategories, getRestaurantCategory } from '@/data/restaurants';
 import Head from 'next/head';
 
 export default function Home() {
@@ -21,121 +15,145 @@ export default function Home() {
   const [totalVotes, setTotalVotes] = useState(0);
   const [votedToday, setVotedToday] = useState(false);
 
-  // 식당 데이터 불러오기
+  // 로컬 스토리지에서 투표 데이터 불러오기
+  const loadVotesFromStorage = () => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const storedVotes = localStorage.getItem('restaurantVotes');
+      return storedVotes ? JSON.parse(storedVotes) : {};
+    } catch (error) {
+      console.error('투표 데이터를 불러오는 중 오류:', error);
+      return {};
+    }
+  };
+
+  // 오늘 날짜 문자열 가져오기
+  const getTodayDateString = () => {
+    const today = new Date();
+    return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  };
+
+  // 날짜 변경 확인 및 투표 초기화
+  const checkAndResetVotes = () => {
+    if (typeof window === 'undefined') return {};
+    
+    const lastVoteDate = localStorage.getItem('lastVoteDate');
+    const todayString = getTodayDateString();
+    
+    if (lastVoteDate !== todayString) {
+      // 날짜가 바뀌면 투표 초기화
+      localStorage.setItem('restaurantVotes', JSON.stringify({}));
+      localStorage.setItem('lastVoteDate', todayString);
+      return {};
+    }
+    
+    return loadVotesFromStorage();
+  };
+
+  // 가장 많은 투표를 받은 레스토랑 찾기
+  const findWinningRestaurant = (restaurants: Restaurant[]): Restaurant | null => {
+    if (restaurants.length === 0) return null;
+    
+    const sortedRestaurants = [...restaurants].sort((a, b) => b.votes - a.votes);
+    
+    // 투표가 있는지 확인
+    if (sortedRestaurants[0].votes > 0) {
+      return sortedRestaurants[0];
+    }
+    
+    return null;
+  };
+
+  // 투표 수에 따라 레스토랑 정렬
+  const sortRestaurantsByVotes = (restaurants: Restaurant[]): Restaurant[] => {
+    return [...restaurants].sort((a, b) => b.votes - a.votes);
+  };
+
+  // 식당 데이터 초기화
   useEffect(() => {
-    const fetchRestaurants = async () => {
+    // 초기 레스토랑 데이터 설정
+    const init = () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/restaurants');
-        let fetchedRestaurants = await response.json();
         
         // 투표 데이터 불러오기
-        const votesResponse = await fetch('/api/vote');
-        const votesData = await votesResponse.json();
+        const votes = checkAndResetVotes();
         
-        // 날짜 확인 및 투표 초기화 필요한지 확인
-        const today = getTodayDateString();
+        // 오늘 투표 여부 확인
+        const todayString = getTodayDateString();
+        const votedStatus = localStorage.getItem('votedToday');
+        setVotedToday(votedStatus === todayString);
         
-        if (votesData.date === today) {
-          const votes = votesData.votes || {};
-          
-          // 투표 수 계산
-          fetchedRestaurants = fetchedRestaurants.map((restaurant: Restaurant) => ({
-            ...restaurant,
-            votes: votes[restaurant.id] || 0
-          }));
-          
-          // 총 투표 수 계산
-          const voteCount = Object.values(votes).reduce((sum: number, vote: any) => sum + vote, 0);
-          setTotalVotes(voteCount);
-          
-          // 로컬 스토리지에서 오늘 투표했는지 확인
-          const votedStatus = localStorage.getItem('votedToday');
-          setVotedToday(votedStatus === today);
-        }
+        // 레스토랑 데이터에 투표 수 적용
+        const restaurantsWithVotes = initialRestaurants.map(restaurant => ({
+          ...restaurant,
+          votes: votes[restaurant.id] || 0
+        }));
         
-        // 카테고리 목록 생성
-        const categorySet = new Set<string>();
-        fetchedRestaurants.forEach((restaurant: Restaurant) => {
-          const category = getRestaurantCategory(restaurant);
-          categorySet.add(category);
-        });
+        // 총 투표 수 계산
+        const voteCount = Object.values(votes).reduce((sum: number, vote: any) => sum + (vote || 0), 0);
+        setTotalVotes(voteCount);
         
-        setCategories(['all', ...Array.from(categorySet)]);
-        setRestaurants(fetchedRestaurants);
+        // 카테고리 목록 설정
+        setCategories(getInitialCategories());
         
-        // 투표 결과에 따라 우승 레스토랑 설정
-        const winner = findWinningRestaurant(fetchedRestaurants);
+        // 레스토랑 데이터 설정
+        setRestaurants(restaurantsWithVotes);
+        
+        // 우승 레스토랑 설정
+        const winner = findWinningRestaurant(restaurantsWithVotes);
         setWinningRestaurant(winner);
         
         setIsLoading(false);
       } catch (error) {
-        console.error('식당 데이터를 불러오는 중 오류가 발생했습니다:', error);
+        console.error('데이터 초기화 중 오류:', error);
+        // 오류 발생 시에도 기본 데이터로 초기화
+        setRestaurants(initialRestaurants);
+        setCategories(getInitialCategories());
         setIsLoading(false);
       }
     };
     
-    fetchRestaurants();
+    init();
   }, []);
-  
-  // 식당 카테고리 가져오기
-  const getRestaurantCategory = (restaurant: Restaurant): string => {
-    if (restaurant.name.includes("김밥")) return "분식";
-    if (restaurant.name.includes("중국") || restaurant.name.includes("취향")) return "중식";
-    if (restaurant.name.includes("한우") || restaurant.name.includes("불고기")) return "한식/고기";
-    if (restaurant.name.includes("칼국수") || restaurant.name.includes("국밥")) return "국수/국밥";
-    if (restaurant.name.includes("두루치기") || restaurant.name.includes("순대")) return "한식/고기";
-    if (restaurant.name.includes("장어")) return "한식/장어";
-    if (restaurant.name.includes("리아")) return "패스트푸드";
-    if (restaurant.name.includes("부대찌개")) return "한식/찌개";
-    return "기타";
-  };
 
   // 식당 투표하기
-  const voteForRestaurant = async (restaurantId: string) => {
+  const voteForRestaurant = (restaurantId: string) => {
     if (votedToday) {
       alert('오늘은 이미 투표하셨습니다. 내일 다시 투표해주세요!');
       return;
     }
     
     try {
-      const response = await fetch('/api/vote', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ restaurantId }),
-      });
+      // 현재 투표 데이터 가져오기
+      const votes = loadVotesFromStorage();
       
-      const votesData = await response.json();
+      // 투표 증가
+      votes[restaurantId] = (votes[restaurantId] || 0) + 1;
       
-      if (response.ok) {
-        // 투표 성공 시 로컬 스토리지에 저장
-        localStorage.setItem('votedToday', getTodayDateString());
-        setVotedToday(true);
-        
-        // 레스토랑 데이터 업데이트
-        const votes = votesData.votes || {};
-        
-        const updatedRestaurants = restaurants.map(restaurant => ({
-          ...restaurant,
-          votes: votes[restaurant.id] || 0
-        }));
-        
-        // 총 투표 수 업데이트
-        const voteCount = Object.values(votes).reduce((sum: number, vote: any) => sum + vote, 0);
-        setTotalVotes(voteCount);
-        
-        setRestaurants(updatedRestaurants);
-        
-        // 투표 결과에 따라 우승 레스토랑 업데이트
-        const winner = findWinningRestaurant(updatedRestaurants);
-        setWinningRestaurant(winner);
-        
-        alert('투표가 완료되었습니다!');
-      } else {
-        alert('투표 중 오류가 발생했습니다. 다시 시도해주세요.');
-      }
+      // 투표 데이터 저장
+      localStorage.setItem('restaurantVotes', JSON.stringify(votes));
+      localStorage.setItem('votedToday', getTodayDateString());
+      
+      setVotedToday(true);
+      
+      // 레스토랑 데이터 업데이트
+      const updatedRestaurants = restaurants.map(restaurant => ({
+        ...restaurant,
+        votes: votes[restaurant.id] || 0
+      }));
+      
+      // 총 투표 수 업데이트
+      const voteCount = Object.values(votes).reduce((sum: number, vote: any) => sum + (vote || 0), 0);
+      setTotalVotes(voteCount);
+      
+      setRestaurants(updatedRestaurants);
+      
+      // 투표 결과에 따라 우승 레스토랑 업데이트
+      const winner = findWinningRestaurant(updatedRestaurants);
+      setWinningRestaurant(winner);
+      
+      alert('투표가 완료되었습니다!');
     } catch (error) {
       console.error('투표 처리 중 오류:', error);
       alert('투표 중 오류가 발생했습니다. 다시 시도해주세요.');

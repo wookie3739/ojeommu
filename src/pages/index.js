@@ -1,31 +1,19 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { restaurants as initialRestaurants } from '../data/restaurants';
+import { Restaurant, restaurants, getCategories, getRestaurantCategory } from '@/data/restaurants';
 
 export default function Home() {
-  const [restaurants, setRestaurants] = useState([]);
+  // 상태 변수 설정
+  const [restaurantList, setRestaurantList] = useState(restaurants);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState(20000);
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [categories, setCategories] = useState(['all']);
+  const [categories, setCategories] = useState(getCategories());
   const [winningRestaurant, setWinningRestaurant] = useState(null);
   const [totalVotes, setTotalVotes] = useState(0);
   const [votedToday, setVotedToday] = useState(false);
-
-  // 식당 카테고리 가져오기
-  const getRestaurantCategory = (restaurant) => {
-    if (restaurant.name.includes("김밥")) return "분식";
-    if (restaurant.name.includes("중국") || restaurant.name.includes("취향")) return "중식";
-    if (restaurant.name.includes("한우") || restaurant.name.includes("불고기")) return "한식/고기";
-    if (restaurant.name.includes("칼국수") || restaurant.name.includes("국밥")) return "국수/국밥";
-    if (restaurant.name.includes("두루치기") || restaurant.name.includes("순대")) return "한식/고기";
-    if (restaurant.name.includes("장어")) return "한식/장어";
-    if (restaurant.name.includes("리아")) return "패스트푸드";
-    if (restaurant.name.includes("부대찌개")) return "한식/찌개";
-    return "기타";
-  };
 
   // 로컬 스토리지에서 투표 데이터 불러오기
   const loadVotesFromStorage = () => {
@@ -63,10 +51,10 @@ export default function Home() {
   };
 
   // 가장 많은 투표를 받은 레스토랑 찾기
-  const findWinningRestaurant = (restaurants) => {
-    if (restaurants.length === 0) return null;
+  const findWinningRestaurant = (restaurantList) => {
+    if (restaurantList.length === 0) return null;
     
-    const sortedRestaurants = [...restaurants].sort((a, b) => b.votes - a.votes);
+    const sortedRestaurants = [...restaurantList].sort((a, b) => b.votes - a.votes);
     
     // 투표가 있는지 확인
     if (sortedRestaurants[0].votes > 0) {
@@ -77,55 +65,36 @@ export default function Home() {
   };
 
   // 투표 수에 따라 레스토랑 정렬
-  const sortRestaurantsByVotes = (restaurants) => {
-    return [...restaurants].sort((a, b) => b.votes - a.votes);
+  const sortRestaurantsByVotes = (restaurantList) => {
+    return [...restaurantList].sort((a, b) => b.votes - a.votes);
   };
 
-  // 카테고리 목록 생성
-  const generateCategories = () => {
-    const categorySet = new Set();
-    initialRestaurants.forEach((restaurant) => {
-      categorySet.add(getRestaurantCategory(restaurant));
-    });
-    return ["all", ...Array.from(categorySet)];
-  };
-
-  // 초기 데이터 로드
+  // 초기화
   useEffect(() => {
-    try {
-      // 투표 데이터 불러오기
-      const votes = checkAndResetVotes();
-      
-      // 오늘 투표 여부 확인
-      const todayString = getTodayDateString();
-      const votedStatus = localStorage.getItem('votedToday');
-      setVotedToday(votedStatus === todayString);
-      
-      // 레스토랑 데이터에 투표 수 적용
-      const restaurantsWithVotes = initialRestaurants.map(restaurant => ({
-        ...restaurant,
-        votes: votes[restaurant.id] || 0
-      }));
-      
-      // 총 투표 수 계산
-      const voteCount = Object.values(votes).reduce((sum, vote) => sum + (vote || 0), 0);
-      setTotalVotes(voteCount);
-      
-      // 카테고리 목록 설정
-      setCategories(generateCategories());
-      
-      // 레스토랑 데이터 설정
-      setRestaurants(restaurantsWithVotes);
-      
-      // 우승 레스토랑 설정
-      const winner = findWinningRestaurant(restaurantsWithVotes);
-      setWinningRestaurant(winner);
-    } catch (error) {
-      console.error('데이터 초기화 중 오류:', error);
-      // 오류 발생 시에도 기본 데이터로 초기화
-      setRestaurants(initialRestaurants);
-      setCategories(generateCategories());
-    }
+    // 투표 데이터 불러오기
+    const votes = checkAndResetVotes();
+    
+    // 오늘 투표 여부 확인
+    const todayString = getTodayDateString();
+    const votedStatus = localStorage.getItem('votedToday');
+    setVotedToday(votedStatus === todayString);
+    
+    // 레스토랑 데이터에 투표 수 적용
+    const restaurantsWithVotes = restaurants.map(restaurant => ({
+      ...restaurant,
+      votes: votes[restaurant.id] || 0
+    }));
+    
+    // 총 투표 수 계산
+    const voteCount = Object.values(votes).reduce((sum, vote) => sum + (vote || 0), 0);
+    setTotalVotes(voteCount);
+    
+    // 레스토랑 데이터 설정
+    setRestaurantList(restaurantsWithVotes);
+    
+    // 우승 레스토랑 설정
+    const winner = findWinningRestaurant(restaurantsWithVotes);
+    setWinningRestaurant(winner);
   }, []);
 
   // 식당 투표하기
@@ -149,7 +118,7 @@ export default function Home() {
       setVotedToday(true);
       
       // 레스토랑 데이터 업데이트
-      const updatedRestaurants = restaurants.map(restaurant => ({
+      const updatedRestaurants = restaurantList.map(restaurant => ({
         ...restaurant,
         votes: votes[restaurant.id] || 0
       }));
@@ -158,7 +127,7 @@ export default function Home() {
       const voteCount = Object.values(votes).reduce((sum, vote) => sum + (vote || 0), 0);
       setTotalVotes(voteCount);
       
-      setRestaurants(updatedRestaurants);
+      setRestaurantList(updatedRestaurants);
       
       // 투표 결과에 따라 우승 레스토랑 업데이트
       const winner = findWinningRestaurant(updatedRestaurants);
@@ -172,7 +141,7 @@ export default function Home() {
   };
 
   // 필터링된 식당 목록
-  const filteredRestaurants = restaurants.filter(restaurant => {
+  const filteredRestaurants = restaurantList.filter(restaurant => {
     // 이름 검색 필터
     const nameMatch = restaurant.name
       .toLowerCase()

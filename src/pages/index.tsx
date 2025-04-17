@@ -10,7 +10,7 @@ export default function Home() {
   const [priceFilter, setPriceFilter] = useState(20000);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [categories, setCategories] = useState<string[]>(['all']);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // 강제로 로딩 상태를 비활성화
   const [winningRestaurant, setWinningRestaurant] = useState<Restaurant | null>(null);
   const [totalVotes, setTotalVotes] = useState(0);
   const [votedToday, setVotedToday] = useState(false);
@@ -109,7 +109,7 @@ export default function Home() {
         console.error('데이터 초기화 중 오류:', error);
         // 오류 발생 시에도 기본 데이터로 초기화
         setRestaurants(initialRestaurants);
-        setCategories(getInitialCategories());
+        setCategories(getCategories());
         setIsLoading(false);
       }
     };

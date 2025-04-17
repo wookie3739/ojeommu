@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Restaurant, restaurants as initialRestaurants, getCategories as getInitialCategories, getRestaurantCategory } from '@/data/restaurants';
+import { Restaurant, restaurants as initialRestaurants, getCategories, getRestaurantCategory } from '@/data/restaurants';
 import Head from 'next/head';
 
 export default function Home() {
@@ -95,7 +95,7 @@ export default function Home() {
         setTotalVotes(voteCount);
         
         // 카테고리 목록 설정
-        setCategories(getInitialCategories());
+        setCategories(getCategories());
         
         // 레스토랑 데이터 설정
         setRestaurants(restaurantsWithVotes);

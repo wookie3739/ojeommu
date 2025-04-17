@@ -252,22 +252,20 @@ export const restaurants: Restaurant[] = [
   },
 ];
 
+// 식당 카테고리 가져오기
 export const getRestaurantCategory = (restaurant: Restaurant): string => {
   if (restaurant.name.includes("김밥")) return "분식";
-  if (restaurant.name.includes("중국") || restaurant.name.includes("취향"))
-    return "중식";
-  if (restaurant.name.includes("한우") || restaurant.name.includes("불고기"))
-    return "한식/고기";
-  if (restaurant.name.includes("칼국수") || restaurant.name.includes("국밥"))
-    return "국수/국밥";
-  if (restaurant.name.includes("두루치기") || restaurant.name.includes("순대"))
-    return "한식/고기";
+  if (restaurant.name.includes("중국") || restaurant.name.includes("취향")) return "중식";
+  if (restaurant.name.includes("한우") || restaurant.name.includes("불고기")) return "한식/고기";
+  if (restaurant.name.includes("칼국수") || restaurant.name.includes("국밥")) return "국수/국밥";
+  if (restaurant.name.includes("두루치기") || restaurant.name.includes("순대")) return "한식/고기";
   if (restaurant.name.includes("장어")) return "한식/장어";
   if (restaurant.name.includes("리아")) return "패스트푸드";
   if (restaurant.name.includes("부대찌개")) return "한식/찌개";
   return "기타";
 };
 
+// 가격 옵션 목록
 export const priceOptions = [
   { value: 5000, label: "~5,000원" },
   { value: 7000, label: "~7,000원" },
@@ -275,6 +273,7 @@ export const priceOptions = [
   { value: 20000, label: "~20,000원" },
 ];
 
+// 식당 카테고리 목록 생성
 export const getCategories = (): string[] => {
   const categories = new Set<string>();
   restaurants.forEach((restaurant) => {

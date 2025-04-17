@@ -57,6 +57,7 @@ export const restaurants = [
     type: "직접 가기",
     votes: 0,
     menu: [
+      // 이미지 1 (김밥 메뉴)
       { name: "오므라이스", price: 6500 },
       { name: "김치오므라이스", price: 7000 },
       { name: "새우오므라이스", price: 7000 },
@@ -72,8 +73,11 @@ export const restaurants = [
       { name: "고구마돈까스", price: 9000 },
       { name: "왕만두치즈돈까스", price: 8500 },
       { name: "철판불고기덮밥", price: 8500 },
+      // 세트 메뉴
       { name: "돈까스+볶면", price: 9500 },
       { name: "돈까스+오므라이스", price: 9500 },
+
+      // 이미지 2 (우동 및 국수 메뉴)
       { name: "우동", price: 5000 },
       { name: "김치우동", price: 5500 },
       { name: "해물튀김우동", price: 6000 },
@@ -86,10 +90,13 @@ export const restaurants = [
       { name: "바지락칼국수", price: 7000 },
       { name: "얼큰칼국수", price: 7500 },
       { name: "육개장칼국수", price: 8500 },
+      // 여름철 메뉴
       { name: "물냉면", price: 7000 },
       { name: "비빔냉면", price: 7000 },
       { name: "콩국수", price: 8000 },
       { name: "냉모밀국수", price: 6000 },
+
+      // 이미지 3 (찌개 메뉴)
       { name: "된장찌개", price: 7000 },
       { name: "김치찌개", price: 8000 },
       { name: "순두부찌개", price: 7000 },
@@ -108,6 +115,8 @@ export const restaurants = [
       { name: "돌솥비빔밥", price: 8000 },
       { name: "참치돌솥비빔밥", price: 9000 },
       { name: "돌솥살밥", price: 9000 },
+
+      // 이미지 4 (김밥 종류 및 라면)
       { name: "김밥", price: 4000 },
       { name: "치즈김밥", price: 4000 },
       { name: "참치김밥", price: 5000 },
@@ -227,3 +236,33 @@ export const restaurants = [
     ],
   },
 ];
+
+// 식당 카테고리 가져오기
+export const getRestaurantCategory = (restaurant) => {
+  if (restaurant.name.includes("김밥")) return "분식";
+  if (restaurant.name.includes("중국") || restaurant.name.includes("취향")) return "중식";
+  if (restaurant.name.includes("한우") || restaurant.name.includes("불고기")) return "한식/고기";
+  if (restaurant.name.includes("칼국수") || restaurant.name.includes("국밥")) return "국수/국밥";
+  if (restaurant.name.includes("두루치기") || restaurant.name.includes("순대")) return "한식/고기";
+  if (restaurant.name.includes("장어")) return "한식/장어";
+  if (restaurant.name.includes("리아")) return "패스트푸드";
+  if (restaurant.name.includes("부대찌개")) return "한식/찌개";
+  return "기타";
+};
+
+// 가격 옵션 목록
+export const priceOptions = [
+  { value: 5000, label: "~5,000원" },
+  { value: 7000, label: "~7,000원" },
+  { value: 10000, label: "~10,000원" },
+  { value: 20000, label: "~20,000원" },
+];
+
+// 식당 카테고리 목록 생성
+export const getCategories = () => {
+  const categories = new Set();
+  restaurants.forEach((restaurant) => {
+    categories.add(getRestaurantCategory(restaurant));
+  });
+  return ["all", ...Array.from(categories)];
+};
